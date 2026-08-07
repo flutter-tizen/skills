@@ -32,6 +32,10 @@ Tizen Studio 6.1 was the last supported standalone release; the `VS Code Extensi
    # Or, for the VS Code extension layout:
    export PATH="$HOME/.tizen-extension-platform/server/sdktools/data/tools:$PATH"
    ```
+   The extension-layout path can move between extension versions; if `sdb` is not at that path, locate it with `find ~ -name sdb -type f 2>/dev/null` and use its parent directory.
+
+   The `export` lines are for Linux/macOS shells. On Windows, add the SDK `tools` directory and `flutter-tizen\bin` to the user `Path` instead, as documented in the official [windows-install.md](https://github.com/flutter-tizen/flutter-tizen/blob/master/doc/windows-install.md).
+
    Verify with:
    ```sh
    which sdb && sdb version

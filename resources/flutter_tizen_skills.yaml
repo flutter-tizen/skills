@@ -29,10 +29,12 @@
        and, if emulators are needed, `[Advanced] 9.0` plus the relevant
        emulator image.
     3. **Put `sdb` and `tizen` on `PATH`** and verify with `sdb version` and
-       `tizen version`.
+       `tizen version`. On Windows, add the SDK `tools` directory to the
+       user `Path` instead.
     4. **Clone flutter-tizen** from github.com/flutter-tizen/flutter-tizen,
        put `bin/` on `PATH` ahead of any upstream `flutter`, and run
-       `flutter-tizen --version` to bootstrap the pinned Flutter SDK.
+       `flutter-tizen --version` to bootstrap the pinned Flutter SDK. On
+       Windows, add `flutter-tizen\bin` to the user `Path`.
     5. **Create a Samsung certificate profile** via Certificate Manager (or
        `tizen security-profiles add`). Tizen refuses to install unsigned
        packages even on the emulator.
@@ -43,6 +45,7 @@
        end-to-end.
   resources:
     - https://github.com/flutter-tizen/flutter-tizen
+    - https://github.com/flutter-tizen/flutter-tizen/blob/master/doc/windows-install.md
     - https://github.com/flutter-tizen/flutter-tizen/wiki/Tizen-SDK
     - https://docs.tizen.org/application/vstools/install-vstools
 
