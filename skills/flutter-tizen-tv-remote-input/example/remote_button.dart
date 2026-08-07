@@ -26,6 +26,7 @@ class RemoteButton extends StatelessWidget {
         const SingleActivator(LogicalKeyboardKey.select):
             const ActivateIntent(),
         const SingleActivator(LogicalKeyboardKey.enter): const ActivateIntent(),
+        const SingleActivator(LogicalKeyboardKey.goBack): const DismissIntent(),
         const SingleActivator(LogicalKeyboardKey.escape): const DismissIntent(),
         const SingleActivator(LogicalKeyboardKey.colorF0Red): RedKeyIntent(),
       },
