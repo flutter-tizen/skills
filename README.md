@@ -20,6 +20,7 @@ Provides Tizen-specific skills. Use with [flutter/agent-plugins](https://github.
 | Skill                                                                          | Description                                       |
 | ------------------------------------------------------------------------------ | ------------------------------------------------- |
 | [flutter-tizen-plugin-regression-test](skills/flutter-tizen-plugin-regression-test/SKILL.md) | Run regression tests for flutter-tizen plugins |
+| [flutter-tizen-plugin-integration-test-update](skills/flutter-tizen-plugin-integration-test-update/SKILL.md) | Update integration test cases for flutter-tizen plugins |
 
 ## Install
 

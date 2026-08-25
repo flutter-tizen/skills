@@ -340,3 +340,46 @@
     - https://github.com/flutter-tizen/flutter-tizen
     - https://github.com/flutter-tizen/plugins/blob/master/.github/recipe.yaml
     - https://docs.flutter.dev/testing/integration-tests
+
+- name: flutter-tizen-plugin-integration-test-update
+  description: Update integration test cases for flutter-tizen plugins listed in
+    .github/recipe.yaml. For Flutter-based plugins, ports Tizen-runnable tests
+    from the upstream package at the exact version the Tizen plugin targets,
+    adding missing tests incrementally or replacing the Tizen file wholesale
+    when the structure differs. For Tizen-only plugins, writes regression
+    tests covering the public API. Use when asked to add or update
+    integration tests for Tizen plugins, or when the upstream package a
+    Tizen plugin wraps has gained integration test coverage the Tizen side
+    is missing.
+  examplePrompt: "Update the integration tests for the audioplayers_tizen plugin"
+  instructions: |
+    1. **Identify the target plugin(s) and path.** Read `.github/recipe.yaml`
+       for testable plugins; read the README "List of packages" table to tell
+       Flutter-based plugins (Path A) from Tizen-only plugins (Path B, no
+       upstream Flutter package).
+    2. **Path A: fetch the upstream test file(s)** at the exact version the
+       Tizen plugin's `example/pubspec.yaml` resolves to, then compare
+       structure against the existing Tizen test file. Add missing tests
+       incrementally when the structure matches; regenerate the file
+       wholesale from upstream (preserving Tizen-unique cases) when it
+       differs significantly. Consolidate multiple upstream test files into
+       one Tizen file.
+    3. **Path B: write regression tests** covering the plugin's public API
+       surface directly, since there is no upstream file to port from.
+    4. **Validate on a device or emulator.** Run the example app's
+       integration test; on a 64-bit target, temporarily raise the example
+       manifest's `api-version` to 8.0 for the run and restore it afterward,
+       and sign with the security profile whose CA matches the target.
+    5. **Resolve failures.** Fix a reproducing failure in the plugin's `lib/`
+       or `tizen/` code when feasible and keep the test; otherwise remove
+       only that test case.
+    6. **Bump the version and commit.** A `lib/`/`tizen/` code change bumps
+       `pubspec.yaml` + `CHANGELOG.md` (and `README.md` if behavior
+       changed); a test-only change is recorded under a CHANGELOG `NEXT`
+       entry instead. Include the upstream plugin version in the commit
+       message.
+  resources:
+    - https://github.com/flutter-tizen/plugins
+    - https://github.com/flutter-tizen/plugins/blob/master/.github/recipe.yaml
+    - https://docs.flutter.dev/testing/integration-tests
+    - https://docs.tizen.org/application/native/tutorials/sign-certificate
