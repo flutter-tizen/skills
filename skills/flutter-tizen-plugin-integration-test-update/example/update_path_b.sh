@@ -14,7 +14,7 @@ echo "=== Path B: Updating regression tests for Tizen-only plugin $PLUGIN_NAME =
 # Step 0: Verify plugin is testable and Tizen-only
 echo "1. Checking plugin type..."
 if ! grep -A 2 "^  ${PLUGIN_NAME}_tizen:" .github/recipe.yaml | grep -q "^\s*profiles:"; then
-    echo "ERROR: $PLUGIN_NAME_tizen not found in recipe.yaml"
+    echo "ERROR: ${PLUGIN_NAME}_tizen not found in recipe.yaml"
     exit 1
 fi
 
@@ -22,7 +22,7 @@ fi
 if ! grep -i "${PLUGIN_NAME}" README.md | grep -q "(Tizen-only)"; then
     echo "WARNING: $PLUGIN_NAME may not be Tizen-only; verify README.md"
 fi
-echo "   ✓ $PLUGIN_NAME_tizen is Tizen-only"
+echo "   ✓ ${PLUGIN_NAME}_tizen is Tizen-only"
 
 # Step B-1: Inventory the public API
 echo ""

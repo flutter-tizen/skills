@@ -254,9 +254,12 @@ dart analyze packages/<plugin>/
 ```
 If `dart format` reports changed files, apply formatting (`dart format packages/<plugin>/`) and re-verify. Fix any `dart analyze` errors before committing.
 
-Stage only the modified integration test file and create a commit with upstream version info:
+Stage the modified `<plugin>_test.dart` **and** any helper file added or
+changed alongside it under A-3's single-file rule (test utils, test data) —
+an orphaned helper left unstaged means the committed test file references
+code that isn't in the repo. Then create a commit with upstream version info:
 ```
-git add packages/<plugin>/example/integration_test/<plugin>_test.dart
+git add packages/<plugin>/example/integration_test/
 git commit -m "[<package_name>] Add integration tests based on upstream v<version>
 
 Add Tizen-compatible test cases ported from upstream <package_name> v<version>:

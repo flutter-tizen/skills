@@ -14,10 +14,10 @@ echo "=== Path A: Updating upstream tests for $PLUGIN_NAME ==="
 # Step 0: Verify plugin is testable (has profiles in recipe.yaml)
 echo "1. Checking recipe.yaml for testable plugins..."
 if ! grep -A 2 "^  ${PLUGIN_NAME}_tizen:" .github/recipe.yaml | grep -q "^\s*profiles:"; then
-    echo "ERROR: $PLUGIN_NAME_tizen not found in recipe.yaml"
+    echo "ERROR: ${PLUGIN_NAME}_tizen not found in recipe.yaml"
     exit 1
 fi
-echo "   ✓ $PLUGIN_NAME_tizen is testable"
+echo "   ✓ ${PLUGIN_NAME}_tizen is testable"
 
 # Step A-1: Determine target version
 echo ""
@@ -25,9 +25,20 @@ echo "2. Determining upstream target version..."
 cd "$PLUGIN_DIR/example"
 PUBSPEC="pubspec.yaml"
 
-# Extract version (handles both "audioplayers: 4.1.0" and "audioplayers: ^4.1.0")
-TARGET_VERSION=$(grep -A 1 "dependencies:" "$PUBSPEC" | grep "$PLUGIN_NAME" | \
-    sed -E 's/.*: *(\^|[>=<]*)?([0-9]+\.[0-9]+\.[0-9]+).*/\2/')
+# Find the dependency line (handles both "audioplayers: 4.1.0" and
+# "audioplayers: ^4.1.0"). grep -A 100 rather than -A 1 because the target
+# package is rarely the line right after "dependencies:".
+DEP_LINE=$(grep -A 100 "^dependencies:" "$PUBSPEC" | grep -m 1 "^\s*${PLUGIN_NAME}:")
+
+if [[ "$DEP_LINE" =~ :[[:space:]]*([0-9]+\.[0-9]+\.[0-9]+)[[:space:]]*$ ]]; then
+    # Pinned to an exact version (no ^/>=/< operator) — use it directly.
+    TARGET_VERSION="${BASH_REMATCH[1]}"
+else
+    # Expressed as a range (e.g. "^4.1.0") — resolve the version pub actually
+    # picked, per SKILL.md A-1, instead of assuming the range's lower bound.
+    TARGET_VERSION=$(flutter pub deps --style=compact 2>/dev/null | \
+        grep -oE "${PLUGIN_NAME} [0-9]+\.[0-9]+\.[0-9]+" | head -n 1 | awk '{print $2}')
+fi
 
 echo "   Target upstream version: $TARGET_VERSION"
 cd - > /dev/null
