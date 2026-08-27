@@ -6,18 +6,18 @@
 set -eu
 
 PLUGIN_NAME="audioplayers"
-PLUGIN_DIR="packages/${PLUGIN_NAME}_tizen"
+PLUGIN_DIR="packages/${PLUGIN_NAME}"
 DEVICE_ID="${DEVICE_ID:-emulator-26101}"
 
 echo "=== Path A: Updating upstream tests for $PLUGIN_NAME ==="
 
-# Step 0: Verify plugin is testable (has profiles in recipe.yaml)
+# Step 0: Verify plugin is testable (has a non-empty profile list in recipe.yaml)
 echo "1. Checking recipe.yaml for testable plugins..."
-if ! grep -A 2 "^  ${PLUGIN_NAME}_tizen:" .github/recipe.yaml | grep -q "^\s*profiles:"; then
-    echo "ERROR: ${PLUGIN_NAME}_tizen not found in recipe.yaml"
+if ! grep -qE "^  ${PLUGIN_NAME}: \[[^]]+\]" .github/recipe.yaml; then
+    echo "ERROR: ${PLUGIN_NAME} has no testable profile in recipe.yaml"
     exit 1
 fi
-echo "   ✓ ${PLUGIN_NAME}_tizen is testable"
+echo "   ✓ ${PLUGIN_NAME} is testable"
 
 # Step A-1: Determine target version
 echo ""
@@ -35,9 +35,11 @@ if [[ "$DEP_LINE" =~ :[[:space:]]*([0-9]+\.[0-9]+\.[0-9]+)[[:space:]]*$ ]]; then
     TARGET_VERSION="${BASH_REMATCH[1]}"
 else
     # Expressed as a range (e.g. "^4.1.0") — resolve the version pub actually
-    # picked, per SKILL.md A-1, instead of assuming the range's lower bound.
-    TARGET_VERSION=$(flutter pub deps --style=compact 2>/dev/null | \
+    # picked, per SKILL.md A-1, using the flutter-tizen-pinned SDK (not
+    # whichever "flutter" happens to be on PATH).
+    TARGET_VERSION=$(flutter-tizen pub deps --style=compact 2>/dev/null | \
         grep -oE "${PLUGIN_NAME} [0-9]+\.[0-9]+\.[0-9]+" | head -n 1 | awk '{print $2}')
+    [ -n "$TARGET_VERSION" ] || { echo "ERROR: could not resolve ${PLUGIN_NAME} version from pub deps"; exit 1; }
 fi
 
 echo "   Target upstream version: $TARGET_VERSION"
@@ -86,7 +88,7 @@ echo "   Expected: All tests pass ✓"
 # Step A-5: Commit (dry-run)
 echo ""
 echo "6. Commit (dry-run)..."
-echo "   git add ${PLUGIN_DIR}/example/integration_test/${PLUGIN_NAME}_test.dart"
-echo "   git commit -m \"[${PLUGIN_NAME}] Add integration tests based on upstream diff\""
+echo "   git add ${PLUGIN_DIR}/example/integration_test/ ${PLUGIN_DIR}/CHANGELOG.md"
+echo "   git commit -m \"[${PLUGIN_NAME}] Add integration tests based on upstream v${TARGET_VERSION}\""
 echo ""
 echo "=== Path A workflow complete ==="

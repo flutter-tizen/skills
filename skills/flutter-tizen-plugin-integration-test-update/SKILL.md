@@ -7,7 +7,7 @@ metadata:
   last_modified: Tue, 25 Aug 2026 00:00:00 GMT
 ---
 
-You are a 10+ year integration test expert specializing in Flutter/Tizen plugin testing.
+# Updating Flutter-Tizen Plugin Integration Tests
 
 ## Goal
 
@@ -47,10 +47,11 @@ Write, validate, and commit integration test cases for Tizen plugins listed in `
 - Determine the exact upstream version the Tizen plugin depends on:
   1. Read `packages/<plugin>/example/pubspec.yaml` and look for the frontend package under `dependencies:`.
   2. If pinned to an exact version (e.g., `audioplayers: 4.1.0`), use that version tag directly.
-  3. If expressed as a range (e.g., `^4.1.0`), run `flutter pub deps` inside `packages/<plugin>/example/` and parse the resolved version from the output.
+  3. If expressed as a range (e.g., `^4.1.0`), run `flutter-tizen pub deps` inside `packages/<plugin>/example/` and parse the resolved version from the output.
   4. Record the resolved version (e.g., `4.1.0`) — this is the **target version**.
 - Fetch the integration test file(s) for that exact version from the upstream source:
-  - For flutter/packages (1st-party): use the git tag `<pkg>-v<version>` on `https://github.com/flutter/packages`:
+  - For `integration_test` itself: this package is **not** semver-tagged under `flutter/packages` — it moved into the Flutter SDK monorepo and is referenced via `sdk: flutter`, not a version. `flutter/packages/packages/integration_test` is now a deprecated stub. Fetch its integration test examples from `https://raw.githubusercontent.com/flutter/flutter/<flutter_sdk_tag_or_branch>/packages/integration_test/example/integration_test/` instead, using the Flutter SDK version/branch that `flutter-tizen` is pinned to (not a `<pkg>-v<version>` tag).
+  - For other flutter/packages (1st-party): use the git tag `<pkg>-v<version>` on `https://github.com/flutter/packages`:
     `https://raw.githubusercontent.com/flutter/packages/refs/tags/<pkg>-v<version>/packages/<pkg>/<pkg>/example/integration_test/<pkg>_test.dart`
   - For 3rd-party: fetch the pub.dev page (`https://pub.dev/packages/<pkg>/versions/<version>`) to find the repository URL, then construct the raw file URL using the corresponding git tag (commonly `v<version>` or `<pkg>-v<version>`).
   - Use WebFetch to retrieve the raw file content.
@@ -257,9 +258,12 @@ If `dart format` reports changed files, apply formatting (`dart format packages/
 Stage the modified `<plugin>_test.dart` **and** any helper file added or
 changed alongside it under A-3's single-file rule (test utils, test data) —
 an orphaned helper left unstaged means the committed test file references
-code that isn't in the repo. Then create a commit with upstream version info:
+code that isn't in the repo. Also stage `CHANGELOG.md` — the "Version bump"
+section below requires a `## NEXT` entry for a test-only change, and that
+entry must be committed together with the test file. Then create a commit
+with upstream version info:
 ```
-git add packages/<plugin>/example/integration_test/
+git add packages/<plugin>/example/integration_test/ packages/<plugin>/CHANGELOG.md
 git commit -m "[<package_name>] Add integration tests based on upstream v<version>
 
 Add Tizen-compatible test cases ported from upstream <package_name> v<version>:
@@ -338,13 +342,15 @@ dart analyze packages/<plugin>/
 ```
 If `dart format` reports changed files, apply formatting (`dart format packages/<plugin>/`) and re-verify. Fix any `dart analyze` errors before committing.
 
-Stage the modified/new integration test file (and any plugin `lib/`/`tizen/`
-code changed under the A-4 policy — commit such a fix separately, and bump the
-plugin version per "Version bump when plugin code is changed" below before
-pushing) and create a commit. Follow the shared **Commit message conventions**
-below.
+Stage the modified/new integration test file, any helper file added alongside
+it (test utils, test data), and `CHANGELOG.md` — the "Version bump" section
+below requires a `## NEXT` entry for a test-only change, committed together
+with the test file (and any plugin `lib/`/`tizen/` code changed under the A-4
+policy — commit such a fix separately, and bump the plugin version per
+"Version bump when plugin code is changed" below before pushing). Follow the
+shared **Commit message conventions** below.
 ```
-git add packages/<plugin>/example/integration_test/<plugin>_test.dart
+git add packages/<plugin>/example/integration_test/ packages/<plugin>/CHANGELOG.md
 git commit -m "[<package_name>] Add regression integration tests"
 ```
 - If the plugin has an upstream counterpart package whose API it follows (even
