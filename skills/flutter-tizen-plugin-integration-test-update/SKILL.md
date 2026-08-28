@@ -54,8 +54,7 @@ Write, validate, and commit integration test cases for Tizen plugins listed in `
   different API/test contract, silently porting tests that don't match the
   Tizen plugin's actual dependency and either testing the wrong behavior or
   failing to compile.
-  - For `integration_test` itself: this package is **not** semver-tagged under `flutter/packages` — it moved into the Flutter SDK monorepo and is referenced via `sdk: flutter`, not a version. `flutter/packages/packages/integration_test` is now a deprecated stub. Fetch its integration test examples from `https://raw.githubusercontent.com/flutter/flutter/<flutter_sdk_tag_or_branch>/packages/integration_test/example/integration_test/` instead, using the Flutter SDK version/branch that `flutter-tizen` is pinned to (not a `<pkg>-v<version>` tag).
-  - For every other pub.dev package (1st- or 3rd-party): prefer the **pub.dev archive for the exact version**, which exists for every published version regardless of whether a matching git tag exists — fetch `https://pub.dev/api/archives/<pkg>-<version>.tar.gz` (equivalent content is browsable at `https://pub.dev/packages/<pkg>/versions/<version>`) and extract `example/integration_test/` from it. This guarantees the fetched tests match the target version's actual published API.
+  - For every pub.dev package (1st- or 3rd-party): prefer the **pub.dev archive for the exact version**, which exists for every published version regardless of whether a matching git tag exists — fetch `https://pub.dev/api/archives/<pkg>-<version>.tar.gz` (equivalent content is browsable at `https://pub.dev/packages/<pkg>/versions/<version>`) and extract `example/integration_test/` from it. This guarantees the fetched tests match the target version's actual published API. If the package's pub.dev listing is discontinued or its `latest.version` is clearly stale relative to the target version, the archive fallback does not apply — treat this the same as "source cannot be obtained" below.
   - As a faster, human-readable alternative when a git tag for the **exact** target version reliably exists (commonly `<pkg>-v<version>` for flutter/packages, `v<version>` for others), fetch it via `raw.githubusercontent.com` instead — but only as a stand-in for the same content the pub.dev archive would give, not as an excuse to skip verifying the version matches.
   - Use WebFetch to retrieve the content.
   - **If the exact target version's source cannot be obtained** (pub.dev archive fetch fails and no matching git tag exists either), **stop and ask the user how to proceed** rather than silently falling back to an older or newer version — do not guess.
@@ -289,7 +288,7 @@ Add Tizen-compatible test cases ported from upstream <package_name> v<version>:
 
 ### B-1. Inventory the public API
 
-- Read `packages/<plugin>/lib/<plugin>.dart` (or `lib/src/`) to enumerate all public classes, methods, getters, setters, and streams.
+- List `packages/<plugin>/lib/` to find the entry-point Dart file — it's usually `<plugin>.dart`, but plugins whose pub package name carries a `_tizen` disambiguation suffix (e.g. `messageport` → `messageport_tizen.dart`) name the file after the pub package name instead. Read that file (or `lib/src/`) to enumerate all public classes, methods, getters, setters, and streams.
 - Read the existing integration test file (if any): `packages/<plugin>/example/integration_test/<plugin>_test.dart`.
 - Identify API surface **not yet covered** by existing tests.
 
