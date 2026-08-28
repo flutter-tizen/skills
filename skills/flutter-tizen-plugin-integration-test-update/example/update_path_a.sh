@@ -3,7 +3,7 @@
 # Example: audioplayers_tizen porting tests from upstream audioplayers 4.1.0.
 # Companion to ../SKILL.md.
 
-set -eu
+set -euo pipefail
 
 PLUGIN_NAME="audioplayers"
 PLUGIN_DIR="packages/${PLUGIN_NAME}"
@@ -26,9 +26,12 @@ cd "$PLUGIN_DIR/example"
 PUBSPEC="pubspec.yaml"
 
 # Find the dependency line (handles both "audioplayers: 4.1.0" and
-# "audioplayers: ^4.1.0"). grep -A 100 rather than -A 1 because the target
-# package is rarely the line right after "dependencies:".
-DEP_LINE=$(grep -A 100 "^dependencies:" "$PUBSPEC" | grep -m 1 "^\s*${PLUGIN_NAME}:")
+# "audioplayers: ^4.1.0"). Scan from "dependencies:" up to the next
+# unindented top-level key rather than a fixed line count, so a pubspec.yaml
+# with a long dependency list doesn't push the target past a hardcoded window.
+DEP_SECTION=$(awk '/^dependencies:/{flag=1; next} /^[^[:space:]]/{flag=0} flag' "$PUBSPEC")
+DEP_LINE=$(printf '%s\n' "$DEP_SECTION" | grep -m 1 "^\s*${PLUGIN_NAME}:" || true)
+[ -n "$DEP_LINE" ] || { echo "ERROR: ${PLUGIN_NAME} not found under dependencies: in $PUBSPEC"; exit 1; }
 
 if [[ "$DEP_LINE" =~ :[[:space:]]*([0-9]+\.[0-9]+\.[0-9]+)[[:space:]]*$ ]]; then
     # Pinned to an exact version (no ^/>=/< operator) — use it directly.
@@ -36,10 +39,13 @@ if [[ "$DEP_LINE" =~ :[[:space:]]*([0-9]+\.[0-9]+\.[0-9]+)[[:space:]]*$ ]]; then
 else
     # Expressed as a range (e.g. "^4.1.0") — resolve the version pub actually
     # picked, per SKILL.md A-1, using the flutter-tizen-pinned SDK (not
-    # whichever "flutter" happens to be on PATH).
-    TARGET_VERSION=$(flutter-tizen pub deps --style=compact 2>/dev/null | \
-        grep -oE "${PLUGIN_NAME} [0-9]+\.[0-9]+\.[0-9]+" | head -n 1 | awk '{print $2}')
-    [ -n "$TARGET_VERSION" ] || { echo "ERROR: could not resolve ${PLUGIN_NAME} version from pub deps"; exit 1; }
+    # whichever "flutter" happens to be on PATH). pipefail (set above) plus
+    # this explicit check ensures a failing `pub deps` surfaces its own error
+    # instead of silently reading as "could not resolve".
+    TARGET_VERSION=$(flutter-tizen pub deps --style=compact | \
+        grep -oE "${PLUGIN_NAME} [0-9]+\.[0-9]+\.[0-9]+" | head -n 1 | awk '{print $2}') \
+        || { echo "ERROR: flutter-tizen pub deps failed while resolving ${PLUGIN_NAME} version"; exit 1; }
+    [ -n "$TARGET_VERSION" ] || { echo "ERROR: could not resolve ${PLUGIN_NAME} version from pub deps output"; exit 1; }
 fi
 
 echo "   Target upstream version: $TARGET_VERSION"
