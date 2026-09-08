@@ -123,7 +123,14 @@
     6. **Attach a debugger.** `flutter-tizen run` prints the Dart VM Service
        URL. Open it in DevTools, or `flutter-tizen attach -d <device-id>` to
        hot-reload into a running app.
-    7. **Disconnect cleanly.** `sdb disconnect <ip>:26101` when finished;
+    7. **Attach the Dart MCP server by VM Service URI, not DTD.** Pass the
+       printed `http://127.0.0.1:<port>/<token>=/` URL to the `vm_service`
+       tool's `connect` command (`dtd` → `listDtdUris` generally does not
+       surface a flutter-tizen app). Once connected, `hot_reload`,
+       `hot_restart`, `get_runtime_errors`, `widget_inspector`, and
+       `flutter_driver_command` all work. There is no `launch_app` step — the
+       app must already be running under `flutter-tizen run`.
+    8. **Disconnect cleanly.** `sdb disconnect <ip>:26101` when finished;
        leftover offline entries break the next `flutter-tizen run`.
   resources:
     - https://github.com/flutter-tizen/flutter-tizen/wiki/Run-an-app
@@ -180,7 +187,9 @@
     Tizen plugin throws `PRIVILEGE_DENIED` / crashes at runtime due to a
     missing privilege, or when declaring privileges in `tizen-manifest.xml`.
     Covers privilege declaration + runtime permission for *any* `*_tizen`
-    plugin.
+    plugin, and privileges needed by plain Dart code with no plugin involved
+    (`package:http` and `dart:io` sockets need the internet privilege; paths
+    outside the app sandbox need a storage privilege).
   examplePrompt: "Add location support to my app on Tizen, including the privilege declaration"
   instructions: |
     1. **Look up the right plugin** in the github.com/flutter-tizen/plugins
@@ -223,6 +232,12 @@
        the `e.code` / `e.message` so a native `permission denied` surfaces.
        Dart/FFI plugins (`shared_preferences_tizen`, `path_provider_tizen`)
        ship no native `.so` — that is normal, not a packaging failure.
+
+    When documenting `tizen_app_control`, note that the embedder queues app
+    controls arriving before the Dart side listens and flushes them to the
+    first listener, but `onAppControl` is a broadcast stream that delivers
+    each request only once — keep one long-lived listener instead of
+    re-subscribing per screen.
 
     When documenting `messageport_tizen`, the receive callback typedef is
     `void Function(dynamic message, [RemotePort? remotePort])` — a sample
@@ -294,6 +309,82 @@
     - https://github.com/flutter-tizen/plugins
     - https://docs.tizen.org/application/native/api/wearable/latest/index.html
     - https://docs.flutter.dev/packages-and-plugins/developing-packages
+
+- name: flutter-tizen-integration-test
+  description: Write and run `integration_test` suites on Tizen devices and
+    emulators with `flutter-tizen test` and `flutter-tizen drive`. Use when adding
+    on-device test coverage to a Tizen app, when a widget test is not enough
+    because the flow needs real plugins or real hardware, when choosing between
+    `flutter-tizen test` and `flutter-tizen drive`, or when an integration run has
+    to be unattended on the TV emulator.
+  examplePrompt: "Add an integration test for the login flow and run it on the TV emulator"
+  instructions: |
+    1. **Author the suite with the general Flutter skill**
+       (`flutter-add-integration-test`): `WidgetTester`, finders,
+       `pumpAndSettle`. That half is platform-agnostic. What changes on Tizen is
+       the wiring and the execution, which the rest of these steps cover - its
+       MCP `launch_app`, chromedriver, and Firebase Test Lab steps do not apply.
+    2. **Add the dependencies** with `flutter-tizen pub add
+       'dev:integration_test:{"sdk":"flutter"}'` and
+       `flutter-tizen pub add 'dev:flutter_test:{"sdk":"flutter"}'`, then
+       `flutter-tizen pub get`. Vanilla `flutter pub get` leaves the Tizen
+       platform interfaces unregistered, so plugin calls under test throw
+       `MissingPluginException`.
+    3. **Put tests in `integration_test/<name>_test.dart`** and begin `main()`
+       with `IntegrationTestWidgetsFlutterBinding.ensureInitialized();`. Target
+       widgets by stable `ValueKey` rather than by text.
+    4. **Prefer `flutter-tizen test integration_test/<name>_test.dart -d <id>`.**
+       flutter-tizen detects the `integration_test/` directory and wraps each
+       entrypoint with a generated registrant for Dart-only Tizen plugins, so
+       this - not `flutter test` - is the supported path. One exception: a
+       suite whose `main()` awaits anything before declaring its tests dies
+       with `Bad state: Can't call test() once tests have begun running`
+       before the first test runs - run that one under `drive` instead of
+       restructuring `main()`.
+    5. **Fall back to `flutter-tizen drive`** for the case above, or when a
+       host-side driver is required (custom `integrationDriver` response data,
+       screenshots, profiling): add
+       `test_driver/integration_test.dart` calling `integrationDriver()`, then
+       run `flutter-tizen drive --driver=test_driver/integration_test.dart
+       --target=integration_test/<name>_test.dart -d <id> --debug`. The upstream
+       `chromedriver`, `-d chrome`, `flutter build apk`, and Firebase Test Lab
+       recipes do not apply to Tizen.
+    6. **Do not invent build-mode flags on `test`.** `flutter-tizen test` has no
+       `--debug` / `--profile` / `--release`; the on-device run is debug, which
+       is also the only mode an emulator can execute (JIT). Those flags live on
+       `drive`, where `--debug` is the default. `-j` / `--concurrency` is
+       ignored for integration tests. `--no-uninstall` keeps the app installed
+       afterwards (it is removed by default) and `--ignore-timeouts` avoids a
+       spurious failure when a cold first build outlasts the test timeout.
+    7. **Drive remote-control flows from inside the test**, not through `sdb`:
+       `await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown)`,
+       `LogicalKeyboardKey.select` and `enter` for OK, `escape` for Back.
+       `sdb shell input_keyevent` never reaches the Flutter embedder. Assert
+       focus through `FocusManager.instance.primaryFocus?.context?.widget.key`
+       with the key on the `Focus` widget itself - `Focus.of(context)` resolves
+       the nearest *ancestor* scope and reports the wrong node.
+    8. **Bound every unattended run** with `timeout 600 ...` (on macOS GNU
+       `timeout` is not preinstalled — use `gtimeout` from coreutils) and
+       treat a timeout as a failure; a hung integration test otherwise
+       holds the device. Never use a `flutter-tizen run` session as the
+       harness.
+    9. **Read failures from the command's own output.** On TV targets `sdb dlog`
+       and `sdb shell` return nothing silently, so grepping them reports a false
+       pass. Capture with `2>&1 | tee integration_test.log` and scan for
+       `Unhandled Exception:`, `EXCEPTION CAUGHT BY`, `MissingPluginException`,
+       `SIGSEGV`, and the reporter's own failure lines. A handled
+       `PlatformException` printed by a passing privilege probe is not a
+       failure.
+    10. **Inspect a stuck app instead of guessing.** Start it with `flutter-tizen
+       run`, take the `http://127.0.0.1:<port>/<token>=/` VM Service URL it
+       prints, connect the Dart MCP server using the `vm_service` tool's
+       `connect` command, then use `widget_inspector`, `get_runtime_errors`, and
+       `flutter_driver_command`.
+  resources:
+    - https://github.com/flutter-tizen/flutter-tizen/wiki/Run-an-app
+    - https://docs.flutter.dev/testing/integration-tests
+    - https://api.flutter.dev/flutter/flutter_test/WidgetTester-class.html
+    - https://api.flutter.dev/flutter/services/LogicalKeyboardKey-class.html
 
 - name: flutter-tizen-plugin-regression-test
   description: Run regression tests for flutter-tizen plugins after changes to

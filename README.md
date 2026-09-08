@@ -13,6 +13,7 @@ Provides Tizen-specific skills. Use with [flutter/agent-plugins](https://github.
 | [flutter-tizen-device](skills/flutter-tizen-device/SKILL.md)                   | Connect devices via sdb, run apps, filter dlog    |
 | [flutter-tizen-tv-remote-input](skills/flutter-tizen-tv-remote-input/SKILL.md) | Handle D-pad focus and remote key input           |
 | [flutter-tizen-use-plugins](skills/flutter-tizen-use-plugins/SKILL.md)         | Use `*_tizen` plugins with privilege declarations |
+| [flutter-tizen-integration-test](skills/flutter-tizen-integration-test/SKILL.md) | Run `integration_test` suites on devices and emulators |
 | [flutter-tizen-create-plugin](skills/flutter-tizen-create-plugin/SKILL.md)     | Create C++ native plugins with method channels    |
 
 
@@ -21,6 +22,22 @@ Provides Tizen-specific skills. Use with [flutter/agent-plugins](https://github.
 | ------------------------------------------------------------------------------ | ------------------------------------------------- |
 | [flutter-tizen-plugin-regression-test](skills/flutter-tizen-plugin-regression-test/SKILL.md) | Run regression tests for flutter-tizen plugins |
 | [flutter-tizen-plugin-integration-test-update](skills/flutter-tizen-plugin-integration-test-update/SKILL.md) | Update integration test cases for flutter-tizen plugins |
+
+## Rules
+
+Skills are opt-in — an agent loads one only when the task matches its description. The
+`flutter` → `flutter-tizen` substitution has to hold for *every* task in a Tizen project, including
+tasks handled by a general Flutter skill from [flutter/agent-plugins](https://github.com/flutter/agent-plugins),
+so it ships as an always-on rule instead:
+
+| Rule | Applies to |
+| ---- | ---------- |
+| [rules/flutter_tizen_cli.md](rules/flutter_tizen_cli.md) | `*.dart`, `pubspec.yaml`, `tizen-manifest.xml` |
+
+Installation is manual — `npx skills add` copies skills only. For Cursor, copy the `.mdc` twin
+[rules/flutter_tizen_cli.mdc](rules/flutter_tizen_cli.mdc) into `.cursor/rules/`. For agents driven by
+an instruction file (Claude Code's `CLAUDE.md`, `AGENTS.md`, `GEMINI.md`), paste the rule body in or
+reference the file from it; there is no rules directory those agents load on their own.
 
 ## Install
 

@@ -1,0 +1,24 @@
+---
+trigger: always_on
+description: Drive Flutter through the flutter-tizen CLI in Tizen projects
+---
+
+This project targets Tizen if it has a `tizen/` directory or a `tizen-manifest.xml`. When it does:
+
+1. **Run every Flutter command through `flutter-tizen`, never `flutter`** — `pub add`, `pub get`, `run`,
+   `build`, `test`, `drive`, `attach`, `clean`, `gen-l10n`, `create`. `flutter-tizen pub` follows every
+   `get` with a Tizen tooling step that injects the Tizen plugin registrant;
+   plain `flutter pub get` skips it, so Dart-side plugins stay unregistered and their first call throws
+   `MissingPluginException` at runtime.
+2. **There is no `flutter-tizen logs`, `screenshot`, or `widget-preview` command.** Read app output from
+   the foreground `flutter-tizen run` console. On Samsung TV targets `sdb dlog` and `sdb shell` return
+   nothing *silently* (`sdb capability` reports `secure_protocol:enabled`), so grepping their output
+   reports a false pass instead of an error.
+3. **To drive a running Tizen app from the Dart MCP server, connect by VM Service URI, not DTD.** Pass the
+   `http://127.0.0.1:<port>/<token>=/` URL that `flutter-tizen run` printed to the `vm_service` tool's
+   `connect` command. `hot_reload`, `hot_restart`, `get_runtime_errors`, `widget_inspector`, and
+   `flutter_driver_command` all work once connected. Use this whenever `dtd` → `listDtdUris` does not
+   surface the app.
+4. **Privileges and app metadata live in `tizen/tizen-manifest.xml`, and it does not hot-reload.** After
+   editing the manifest, rebuild and reinstall (`flutter-tizen run`, or `flutter-tizen build tpk` plus
+   `sdb install`).

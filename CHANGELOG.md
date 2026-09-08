@@ -1,5 +1,31 @@
 # Changelog
 
+## Unreleased
+
+Closes the gaps where [flutter/agent-plugins](https://github.com/flutter/agent-plugins) skills give
+Tizen-incorrect guidance.
+
+### Skills
+
+- **flutter-tizen-integration-test** — Run `integration_test` suites on Tizen targets with
+  `flutter-tizen test` (the supported path; it registers Dart-only Tizen plugins) or `flutter-tizen
+  drive` when a host driver is needed. Replaces the upstream `chromedriver` / `-d chrome` /
+  `flutter build apk` / Firebase Test Lab recipes, none of which apply to Tizen.
+
+### Rules
+
+- `rules/flutter_tizen_cli.md` (+ `.mdc` for Cursor) — always-on rule carrying the invariants no
+  single skill can enforce: `flutter-tizen` instead of `flutter`, no `logs` / `screenshot` /
+  `widget-preview` command, read logs from the `run` console, and attach the Dart MCP server by VM
+  Service URI rather than DTD.
+
+### Changed
+
+- **flutter-tizen-device** — documents attaching the Dart MCP server to a running Tizen app through
+  the `vm_service` tool's `connect` command, with the tools that then become available.
+- **flutter-tizen-use-plugins** — now also triggers on privileges needed by plain Dart code with no
+  plugin involved (`package:http` / `dart:io` sockets need the internet privilege).
+
 ## 0.1.0
 
 Initial release of the Flutter-Tizen agent skill set.

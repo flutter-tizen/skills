@@ -105,6 +105,23 @@ The trailing `=/` is part of the URL — keep it. The URL comes from the app's o
 
 For VS Code, the bundled `flutter-tizen: Attach (project)` configuration automates this.
 
+## Driving the app from the Dart MCP server
+
+The Dart MCP server (`dart mcp-server`) cannot launch a Tizen app — it has no Tizen device backend, and its DTD discovery (`dtd` → `listDtdUris`) generally does not surface one. Attach by **VM Service URI** instead:
+
+1. `flutter-tizen -d <id> run` and copy the printed `http://127.0.0.1:<port>/<token>=/` URL (the trailing `=/` is part of it).
+2. Call the `vm_service` tool with `command: connect` and that URL as `appUri`. This is the documented path for "apps not launched via DTD".
+3. Once connected, the app-level tools work as they do on any other platform:
+
+| Tool | Use |
+|---|---|
+| `hot_reload` / `hot_restart` | Push an edit without leaving the terminal |
+| `get_runtime_errors` | Last exceptions, including ones that scrolled past in the console |
+| `widget_inspector` (`get_widget_tree`) | See what is actually mounted before guessing at finders |
+| `flutter_driver_command` | Tap / scroll / enter text against real widgets |
+
+Use the Dart SDK that ships with flutter-tizen (`flutter-tizen`'s bundled `flutter/bin/dart`) so the MCP server matches the app's engine.
+
 ## Workflow: Bring Up a Target and Read Logs
 
 ### Task Progress

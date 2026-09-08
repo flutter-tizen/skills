@@ -1,6 +1,6 @@
 ---
 name: flutter-tizen-use-plugins
-description: Pick and wire up Tizen-side Flutter plugins (Samsung-maintained `*_tizen` packages and Tizen-exclusive plugins such as `tizen_app_control`, `messageport_tizen`, `permission_handler_tizen`). Use when a cross-platform plugin lacks Tizen support, when needing a Tizen-only feature (app-control, messageport, package manager), when a Tizen plugin throws `PRIVILEGE_DENIED` / crashes at runtime due to a missing privilege, or when declaring privileges in `tizen-manifest.xml`. Covers privilege declaration + runtime permission for *any* `*_tizen` plugin.
+description: Pick and wire up Tizen-side Flutter plugins (Samsung-maintained `*_tizen` packages and Tizen-exclusive plugins such as `tizen_app_control`, `messageport_tizen`, `permission_handler_tizen`). Use when a cross-platform plugin lacks Tizen support, when needing a Tizen-only feature (app-control, messageport, package manager), when a Tizen plugin throws `PRIVILEGE_DENIED` / crashes at runtime due to a missing privilege, or when declaring privileges in `tizen-manifest.xml`. Covers privilege declaration + runtime permission for *any* `*_tizen` plugin, and privileges needed by plain Dart code with no plugin involved (`package:http` and `dart:io` sockets need the internet privilege; paths outside the app sandbox need a storage privilege).
 metadata:
   target: flutter-tizen
   category: plugins
@@ -82,6 +82,18 @@ Add privileges inside the `<privileges>` block:
 
 Most plugins list their required privileges in their README. If the plugin calls a Native API marked `privlevel="public"` in the Tizen docs, the corresponding `http://tizen.org/privilege/...` URL must appear in the manifest, or the call fails at runtime with `permission denied` even though Dart returned no error from `await Permission.x.request()`.
 
+### Privileges with no plugin involved
+
+Plain Dart code needs privileges too, and no plugin README will tell you:
+
+| Dart code | Required privilege |
+|---|---|
+| `package:http`, `dart:io` `HttpClient` / `Socket` / `WebSocket` | `http://tizen.org/privilege/internet` |
+| Reading or writing outside the app sandbox | `mediastorage` or `externalstorage` (privacy — also needs a runtime request) |
+| `dart:io` `Process` | not available to ordinary apps; use a plugin instead |
+
+A freshly created project's manifest declares **none** of these. The first `http.get` on a device then fails with a socket / connection error that looks like a network problem, not a missing declaration — check `<privileges>` before debugging the network.
+
 ## Plugin patterns to know
 
 ### `tizen_app_control` — launch and receive app-control intents
@@ -102,7 +114,7 @@ AppControl.onAppControl.listen((received) {
 });
 ```
 
-Wires straight into deep linking — no extra glue needed.
+Wires straight into deep linking. The embedder queues app controls that arrive before the Dart side listens and flushes them to the first listener, so the launch request is not lost — but `onAppControl` is a broadcast stream and each request is delivered only once: keep one long-lived listener instead of re-subscribing per screen.
 
 ### `messageport_tizen` — talk to a Tizen service app
 
