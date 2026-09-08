@@ -46,15 +46,23 @@ void main() {
       }
     });
 
-    testWidgets('a privilege-gated call fails loudly, not silently', (WidgetTester tester) async {
+    testWidgets('refresh loads expected data with required privileges', (WidgetTester tester) async {
       app.main();
       await tester.pumpAndSettle();
 
+      // Seed a refresh response with an item absent from the initial state.
+      // Replace this key with the widget displaying that item's actual data.
+      final loadedItem = find.byKey(const ValueKey('loaded_item_123'));
+      expect(loadedItem, findsNothing);
+
       await tester.tap(find.byKey(const ValueKey('refresh')));
 
-      // A `<privilege>` missing from tizen/tizen-manifest.xml surfaces here as a
-      // PlatformException. Asserting on it keeps the manifest honest.
-      await tester.pumpAndSettle();
+      // Frame settling does not wait for network/plugin work. Allow up to 10s
+      // for the result; a swallowed privilege error must still fail this test.
+      for (var attempt = 0; attempt < 100 && loadedItem.evaluate().isEmpty; attempt++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+      expect(loadedItem, findsOneWidget, reason: 'Refresh must load the expected item');
       expect(find.byKey(const ValueKey('error_banner')), findsNothing);
     });
   });
